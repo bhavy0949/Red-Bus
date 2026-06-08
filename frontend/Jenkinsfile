@@ -1,0 +1,59 @@
+pipeline {
+    agent any
+    
+    environment {
+        DOCKER_HUB_CREDENTIALS = credentials('docker-hub-credentials')
+        DOCKER_HUB_USERNAME = 'bhavy0949'
+        SERVICE_NAME = 'frontend'
+        GIT_REPO = 'https://github.com/bhavy0949/Red-Bus.git'
+        PATH = "/opt/homebrew/bin:/usr/local/bin:${env.PATH}"
+    }
+    
+    stages {
+        stage('Clone Repository') {
+            steps {
+                echo "========== Cloning Repository for ${SERVICE_NAME} =========="
+                git branch: 'main', url: "${GIT_REPO}"
+                script {
+                    env.GIT_TAG = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+                    env.IMAGE_NAME = "${DOCKER_HUB_USERNAME}/redbus-${SERVICE_NAME}:${env.GIT_TAG}"
+                    env.LATEST_IMAGE = "${DOCKER_HUB_USERNAME}/redbus-${SERVICE_NAME}:latest"
+                }
+            }
+        }
+
+        stage('Build') {
+            steps {
+                dir("${SERVICE_NAME}") {
+                    echo "========== Building Frontend =========="
+                    sh 'npm install && npm run build'
+                }
+            }
+        }
+        
+        stage('Build Docker Image') {
+            steps {
+                dir("${SERVICE_NAME}") {
+                    echo "========== Building Docker Image =========="
+                    sh "docker build -t ${env.IMAGE_NAME} -t ${env.LATEST_IMAGE} ."
+                }
+            }
+        }
+        
+        stage('Push to Docker Hub') {
+            steps {
+                script {
+                    echo "========== Pushing to Docker Hub =========="
+                    sh "echo \$DOCKER_HUB_CREDENTIALS_PSW | docker login -u \$DOCKER_HUB_CREDENTIALS_USR --password-stdin"
+                    sh "docker push ${env.IMAGE_NAME}"
+                    sh "docker push ${env.LATEST_IMAGE}"
+                    sh "docker logout"
+                }
+            }
+        }
+    }
+    
+    post {
+        always { cleanWs() }
+    }
+}
