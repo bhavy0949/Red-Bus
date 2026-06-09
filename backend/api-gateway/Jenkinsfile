@@ -1,8 +1,5 @@
 pipeline {
     agent any
-    tools {
-        maven 'Maven3'
-    }
     environment {
         DOCKER_HUB_CREDENTIALS = credentials('docker-hub-credentials')
         DOCKER_HUB_USERNAME = 'bhavy0949'
