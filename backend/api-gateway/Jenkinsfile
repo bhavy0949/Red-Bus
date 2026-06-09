@@ -13,12 +13,7 @@ pipeline {
         stage('Clone Repository') {
             steps {
                 echo "========== Cloning Repository for ${SERVICE_NAME} =========="
-//                 git branch: 'main', url: "${GIT_REPO}"
-//                 / Clears the corrupted workspace completely
-//                 deleteDir()
-//
-//                 // Forces a clean, native git clone into the directory
-                sh "git clone -b main ${GIT_REPO} ."
+                git branch: 'main', url: "${GIT_REPO}"
                 script {
                     env.GIT_TAG = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
                     env.IMAGE_NAME = "${DOCKER_HUB_USERNAME}/redbus-${SERVICE_NAME}:${env.GIT_TAG}"
