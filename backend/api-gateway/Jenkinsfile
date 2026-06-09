@@ -6,7 +6,7 @@ pipeline {
         DOCKER_HUB_USERNAME = 'bhavy0949'
         SERVICE_NAME = 'api-gateway'
         GIT_REPO = 'https://github.com/bhavy0949/Red-Bus.git'
-        PATH = "/opt/homebrew/bin:/usr/local/bin:${env.PATH}"
+        PATH = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:${env.PATH}"
     }
     
     stages {
