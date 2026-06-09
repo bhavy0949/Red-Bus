@@ -31,7 +31,7 @@ pipeline {
                     // Install the missing library, then run your npm commands
                     sh '''
                         if command -v apt-get >/dev/null; then
-                            sudo apt-get update && sudo apt-get install -y libatomic1
+                            apt-get update && apt-get install -y libatomic1
                         elif command -v apk >/dev/null; then
                             apk update && apk add libatomic
                         fi
