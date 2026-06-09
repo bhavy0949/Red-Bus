@@ -1,5 +1,5 @@
 pipeline {
-    agent none
+    agent any
     
     environment {
         GIT_REPO = 'https://github.com/bhavy0949/Red-Bus.git'
