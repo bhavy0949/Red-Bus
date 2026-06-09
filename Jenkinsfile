@@ -39,7 +39,7 @@ pipeline {
                     echo "Updating manifests to use version: ${gitTag}"
                     
                     // Replace :latest with :hash in all k8s files
-                    sh "sed -i '' 's/:latest/:${gitTag}/g' k8s/*.yaml"
+                    sh "sed -i -e '' 's/:latest/:${gitTag}/g' k8s/*.yaml"
                     
                     sh """
                         kubectl apply -f k8s/namespace.yaml --validate=false
