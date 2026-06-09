@@ -14,6 +14,12 @@ pipeline {
             steps {
                 echo "========== Cloning Repository for ${SERVICE_NAME} =========="
                 git branch: 'main', url: "${GIT_REPO}"
+                // Adding wipeOutWorkspace ensures Jenkins clears old states that cause status 128
+                checkout([$class: 'GitSCM',
+                    branches: [[name: 'main']],
+                    extensions: [[$class: 'WipeWorkspace']],
+                    userRemoteConfigs: [[url: "${GIT_REPO}"]]
+                ])
                 script {
                     env.GIT_TAG = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
                     env.IMAGE_NAME = "${DOCKER_HUB_USERNAME}/redbus-${SERVICE_NAME}:${env.GIT_TAG}"
