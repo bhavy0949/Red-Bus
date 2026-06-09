@@ -27,7 +27,15 @@ pipeline {
         stage('Build') {
             steps {
                 dir("${SERVICE_NAME}") {
-                    echo "========== Building Frontend =========="
+                    echo "========== Installing System Dependencies & Building Frontend =========="
+                    // Install the missing library, then run your npm commands
+                    sh '''
+                        if command -v apt-get >/dev/null; then
+                            sudo apt-get update && sudo apt-get install -y libatomic1
+                        elif command -v apk >/dev/null; then
+                            apk update && apk add libatomic
+                        fi
+                    '''
                     sh 'npm install && npm run build'
                 }
             }
