@@ -19,7 +19,8 @@ pipeline {
                 script {
                     env.GIT_TAG = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
                     env.IMAGE_NAME = "${DOCKER_HUB_USERNAME}/redbus-${SERVICE_NAME}:${env.GIT_TAG}"
-                    
+                    // Added environment variable for the 'latest' tag path
+                    env.LATEST_IMAGE_NAME = "${DOCKER_HUB_USERNAME}/redbus-${SERVICE_NAME}:latest"
                     def exists = sh(script: "docker manifest inspect ${env.IMAGE_NAME} > /dev/null 2>&1", returnStatus: true)
                     if (exists == 0) {
                         echo "✅ Image ${env.IMAGE_NAME} exists. Skipping."
@@ -47,6 +48,8 @@ pipeline {
                 echo "========== Building Docker Image for ${SERVICE_NAME} =========="
                 dir("backend/${SERVICE_NAME}") {
                     sh "docker build -t ${env.IMAGE_NAME} ."
+                    // 2. Add the 'latest' tag pointing to the build you just completed
+                    sh "docker tag ${env.IMAGE_NAME} ${env.LATEST_IMAGE_NAME}"
                 }
             }
         }

@@ -48,7 +48,10 @@ pipeline {
             steps {
                 echo "========== Building Docker Image for ${SERVICE_NAME} =========="
                 dir("backend/${SERVICE_NAME}") {
-                    sh "docker build -t ${env.IMAGE_NAME} -t ${env.LATEST_IMAGE} ."
+                    // 1. Build the specific git tag image
+                    sh "docker build -t ${env.IMAGE_NAME} ."
+                    // 2. Add the 'latest' tag pointing to the build you just completed
+                    sh "docker tag ${env.IMAGE_NAME} ${env.LATEST_IMAGE_NAME}"
                 }
             }
         }

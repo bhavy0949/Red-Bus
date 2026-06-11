@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: api-gateway
-        image: bhavy0949/redbus-api-gateway:71cb2a3
+        image: bhavy0949/redbus-api-gateway:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 8080

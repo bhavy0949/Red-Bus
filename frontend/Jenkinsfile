@@ -46,6 +46,8 @@ pipeline {
                 dir("${SERVICE_NAME}") {
                     echo "========== Building Docker Image =========="
                     sh "docker build -t ${env.IMAGE_NAME} -t ${env.LATEST_IMAGE} ."
+                    // 2. Add the 'latest' tag pointing to the build you just completed
+                    sh "docker tag ${env.IMAGE_NAME} ${env.LATEST_IMAGE_NAME}"
                 }
             }
         }
