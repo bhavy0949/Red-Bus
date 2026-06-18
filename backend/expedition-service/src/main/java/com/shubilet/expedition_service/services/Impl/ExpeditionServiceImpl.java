@@ -63,7 +63,7 @@ public class ExpeditionServiceImpl implements ExpeditionService {
             return List.of();
         }
 
-        Instant instantDate = Instant.parse(date + "T00:00:00Z");
+        Instant instantDate = Instant.parse(date + "T00:00:00Z"); // set to very start of the day 12am type shit
         Instant endOfDay = instantDate.plusSeconds(86399); // Add 23 hours, 59 minutes, and 59 seconds to get the end of the day
         
         return DTOMapperUtils.toExpeditionForCustomerDTO(

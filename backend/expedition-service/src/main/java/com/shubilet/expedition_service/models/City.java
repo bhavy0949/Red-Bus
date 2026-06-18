@@ -34,7 +34,6 @@ public class City implements Serializable {
     @Column(nullable = false, updatable = false, unique = true)
     private String name;
 
-
     // ------------------------
     // Constructors
     // ------------------------
@@ -51,6 +50,7 @@ public class City implements Serializable {
     public Integer getId() {
         return id;
     }
+
     public void setId(Integer id) {
         this.id = id;
     }
@@ -58,6 +58,7 @@ public class City implements Serializable {
     public String getName() {
         return name;
     }
+
     public void setName(String name) {
         this.name = name;
     }
@@ -67,8 +68,10 @@ public class City implements Serializable {
     // ------------------------
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof City)) return false;
+        if (this == o)
+            return true;
+        if (!(o instanceof City))
+            return false;
         City city = (City) o;
         return id == city.id && name.equals(city.name);
     }

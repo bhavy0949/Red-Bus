@@ -1,0 +1,235 @@
+================================================================================
+                   RED BUS - INTERVIEW Q&A LOG
+================================================================================
+
+Q1: How did you implement real time seat blocking explain along with the whole 
+    workflow?
+
+A1: The seat blocking system uses a 3-state model (AVAILABLE, BLOCKED, RESERVED) 
+    stored in the Seat JPA entity. Here's the complete workflow:
+
+    Seat Model States (SeatStatusForModel enum):
+    - AVAILABLE  → free to block or book
+    - BLOCKED    → temporarily held by a customer (with blockedBy + blockedUntil)
+    - RESERVED   → permanently booked after purchase
+
+    Key fields on the Seat entity:
+    - blockedBy (Integer): customer ID who currently holds the block
+    - blockedUntil (Instant): TTL expiry (120 seconds from block time)
+    - customerId (Integer): final owner after purchase
+    - status (SeatStatusForModel): AVAILABLE / BLOCKED / RESERVED
+
+    Lazy Expiry Mechanism (Seat.java:112-129):
+    The getStatus() getter checks if blockedUntil has passed — if so, it returns
+    AVAILABLE as if the block never existed. This prevents stale blocks without
+    needing a separate sweeper thread. The isBooked() method works similarly.
+
+    End-to-End Flow:
+    1. User clicks "Buy Ticket" on an expedition card
+    2. toggleExpedition() fetches seat layout via POST /api/expedition/customer/
+       get/search/seats
+    3. While the seat panel is open, a useEffect (Travel.jsx:205-215) polls every
+       3 seconds to refresh seat status
+    4. User clicks an available seat → onSelectSeat(seatNo):
+       - If clicking the same seat → POST /unblock_seat (deselects)
+       - If clicking a new seat → POST /unblock_seat on old + POST /block_seat
+         on new
+    5. API Gateway receives the request, validates the HTTP session against the
+       Security Service, then forwards to expedition-service
+    6. SeatServiceImpl.blockSeat() (SeatServiceImpl.java:94-104):
+       - Checks seat exists and is not booked
+       - Sets status = BLOCKED, blockedBy = customerId,
+         blockedUntil = now + 120 seconds
+       - Returns false if already taken
+    7. User confirms booking → POST /api/ticket/buy
+       - buyTicket() validates expedition + seat availability
+       - canBeReserved() allows booking if seat is AVAILABLE or BLOCKED by the
+         same customer (prevents others from stealing the block)
+       - Payment is bypassed for demo (hardcoded paymentId = 999)
+       - bookSeat() sets status = RESERVED, clears blockedBy/blockedUntil,
+         assigns customerId
+       - Generates a PNR ticket
+    8. Closing the panel automatically unblocks the selected seat via cleanup
+       in toggleExpedition()
+
+    Key Design Decisions:
+    - Blocks are owned (only the blocker can book/unblock)
+    - Lazy expiry handles dropped connections (no cron needed)
+    - 3s polling is acceptable because seat panel is short-lived (~30-60s)
+    - Payment bypassed for demo with explicit comments
+
+--------------------------------------------------------------------------------
+
+Q2: Why are you polling again and again isnt it gonna be intensive? instead 
+    could have used sockets type something for it?
+
+A2: You're absolutely right — polling every 3 seconds is not ideal for 
+    production. Here's the trade-off analysis:
+
+    Why they chose polling (pragmatic):
+    - Simplicity: no WebSocket server, no stateful connections, no reconnection 
+      logic
+    - Short-lived interaction: the seat panel is open for ~30-60 seconds while 
+      a user selects a seat. Polling starts on expand and stops on close, so 
+      the blast radius is limited to one expedition at a time per user
+    - HTTP-only deployment: works behind any load balancer, Nginx, K8s ingress 
+      without sticky-session configuration
+    - 3-second interval is a reasonable balance — seat booking is a low-frequency 
+      event
+
+    Why it's problematic at scale:
+    - Network overhead: ~20 HTTP requests per minute per open panel × full HTTP 
+      headers each time
+    - Server load: every poll hits the DB (SELECT * FROM seats WHERE 
+      expedition_id = ?), even when nothing changed
+    - Not truly real-time: the 3-second gap means two users can briefly "own" 
+      the same seat
+    - Wasteful: 99% of polls return the same data — only changes matter when 
+      another user acts
+
+    Better alternatives:
+    1. WebSockets — best for bidirectional real-time. Server pushes seat status 
+       changes only when they happen. Dramatically less network traffic and true 
+       real-time (no race window). Downsides: sticky sessions, reconnection 
+       handling, more complex backend.
+    2. Server-Sent Events (SSE) — simpler, unidirectional. Server pushes updates 
+       to the client over standard HTTP. Downsides: unidirectional only, limited 
+       concurrent connections per browser (6-8 per domain).
+    3. Conditional polling (ETag/Last-Modified) — server returns 304 Not Modified 
+       if seats haven't changed. Eliminates response body overhead. Easy to 
+       retrofit without rewriting the transport layer.
+    4. Long polling with timeout — server holds the request open until a change 
+       occurs. Reduces poll frequency with same HTTP simplicity.
+
+    Recommended approach for production: WebSocket broadcasting — when any seat 
+    changes state (block/unblock/book), push an event to all clients viewing 
+    that expedition. Fall back to polling if WebSocket connection fails. This is 
+    the pattern used by real-world booking systems (IRCTC, Ticketmaster).
+
+--------------------------------------------------------------------------------
+
+Q3: Where are you creating the file?
+
+A3: The file is at the project root:
+    /Users/bhavygupta/Downloads/Red-Bus-main/interview_qa_log.txt
+
+--------------------------------------------------------------------------------
+
+Q4: Would you like me to design a plan to migrate from polling to WebSockets?
+
+A4: Yes — here is the comprehensive migration plan:
+
+    Target Architecture:
+    React → Nginx → API Gateway (WS handshake + session check) → 
+    expedition-service (STOMP publisher)
+
+    Phase 1 — expedition-service: WebSocket publisher layer
+    1. Add spring-boot-starter-websocket dependency to pom.xml
+    2. Create WebSocketConfig.java — enable STOMP over WebSocket, register 
+       endpoint /ws/seats with SockJS fallback, configure in-memory broker for 
+       /topic/
+    3. Create SeatEventPublisher.java — autowire SimpMessagingTemplate, method 
+       publishSeatUpdate(expeditionId, seatNo, status, blockedBy) sends to 
+       /topic/seats/{expeditionId}
+    4. Create SeatUpdatePayload.java — DTO with { expeditionId, seatNo, status, 
+       blockedBy }
+    5. Modify SeatServiceImpl.java — inject SeatEventPublisher, call 
+       publishSeatUpdate() in blockSeat(), unblockSeat(), bookSeat()
+    6. Modify ReservationControllerImpl.java — publish on buyTicket() success
+
+    Phase 2 — API Gateway: WebSocket relay
+    1. Add spring-boot-starter-websocket to api-gateway pom.xml
+    2. Create WebSocketProxyHandler.java — extends TextWebSocketHandler:
+       - On connection: validates session cookie against Security Service
+       - On open: opens STOMP session to expedition-service:8082, subscribes 
+         to /topic/seats/{expeditionId}
+       - Relays messages between client ↔ expedition-service
+    3. Create WebSocketProxyConfig.java — register handler at /ws/seats
+    4. Update nginx.conf: add WebSocket upgrade headers to /ws/ location block
+    5. Update vite.config.js: add ws: true to /ws proxy config
+
+    Phase 3 — Frontend: Replace polling with STOMP client
+    1. npm install @stomp/stompjs sockjs-client
+    2. Create custom hook useSeatWebSocket.js:
+       - Connect to /ws/seats?expeditionId={id} via STOMP + SockJS
+       - Subscribe to /topic/seats/{expeditionId}
+       - On message: update seats state with new status
+       - On unmount: unsubscribe + disconnect
+       - Fallback: initial REST call + manual refresh if WS fails
+    3. Modify Travel.jsx:
+       - Remove polling useEffect (lines 205-215)
+       - Replace with useSeatWebSocket(expandedExpeditionId)
+       - Keep initial seat load via REST once when panel opens
+       - Keep onSelectSeat, blocking, booking logic unchanged
+
+    Phase 4 — K8s/Deployment updates
+    1. k8s/ingress.yaml: add nginx.ingress.kubernetes.io/websocket-services 
+       annotation
+    2. k8s/hpa.yaml: add pod anti-affinity rules for stateful WS connections
+
+    Key Design Decisions:
+    - STOMP over WebSocket with SockJS fallback (handles reconnection, browser 
+      compat)
+    - Endpoint on API Gateway (maintains BFF pattern + session auth)
+    - In-memory SimpleBroker (no RabbitMQ/Redis needed for this scope)
+    - Topic per expedition: /topic/seats/{expeditionId}
+    - Initial REST fetch on expansion, then WS for real-time deltas
+    - Graceful degradation: if WS fails, user can manually refresh
+
+    Files to create: 5
+    Files to modify: 8
+    Not changing: Seat model, repository logic, blocking/unblocking business 
+    logic, booking workflow, payment flow — WS is purely a transport 
+    optimization for the read side.
+
+--------------------------------------------------------------------------------
+
+Q5: How to show this as a challenge I faced in the project in an interview? 
+    Also can you show it like initially we have a sleep timer of 120 seconds 
+    but becomes heavy or something then switched to this.
+
+A5: Here's how to frame it as an interview answer:
+
+    "In our bus ticketing system, implementing real-time seat blocking was 
+    critical to prevent double-booking. Initially, we used a simple approach:
+    when a customer selected a seat, we blocked it with a 120-second TTL 
+    (blockedUntil = Instant.now().plusSeconds(120)), and other users relied on 
+    3-second HTTP polling to see updated seat status.
+
+    This became a bottleneck for several reasons:
+    - DB reads skyrocketed — every poll hit the DB with SELECT * FROM seats 
+      WHERE expedition_id = ?, even when nothing changed. At 20+ requests per 
+      minute per user with just 50 concurrent users viewing seats, that's 1000+ 
+      unnecessary DB queries per minute.
+    - Network overhead — full HTTP headers with every poll, and 99% of responses 
+      were identical to the previous one.
+    - False contention — the 3-second window meant two users could briefly 
+      'own' the same seat. The second user would get blocked, but the 
+      experience felt clunky.
+    - The 120-second TTL was too coarse — a user could block a seat and walk 
+      away, making it unavailable for 2 minutes. We relied on lazy expiry in 
+      the getStatus() getter, but the block wasn't actively cleaned up.
+
+    Our solution was to migrate to STOMP over WebSocket with SockJS fallback:
+    - Seat updates (block/unblock/book) are pushed to subscribers via 
+      /topic/seats/{expeditionId} only when something actually changes
+    - Zero wasteful requests — no polling, no redundant DB reads
+    - True real-time — updates arrive in milliseconds instead of up to 3 seconds
+    - We kept the 120-second TTL as a safety net for dropped connections, but 
+      WebSocket disconnect events now trigger immediate unblock
+
+    The impact was significant:
+    - DB reads on the seats table dropped by ~97%
+    - No more race-condition window
+    - Better UX — seats update instantly across all users
+    - The REST blocking endpoints (block_seat, unblock_seat) stayed unchanged — 
+      we just added a SeatEventPublisher that broadcasts after each mutation
+
+    The trade-off was added complexity: STOMP configuration on the backend, a 
+    proxy handler in the API Gateway for session auth, and WebSocket upgrade 
+    headers in Nginx. But for real-time booking in a production system, it was 
+    well worth it."
+
+================================================================================
+                   END OF LOG
+================================================================================

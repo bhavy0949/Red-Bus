@@ -35,6 +35,9 @@ public class AdminSessionServiceImpl implements AdminSessionService {
 
         adminSessionRepository.save(adminSession);
 
+        //ADMIN("ADMIN") defines an enum constant named ADMIN and assigns it the string value "ADMIN".
+        //.getCode() is a getter method that returns this string value.
+        //Therefore, UserType.ADMIN.getCode() simply returns the literal string: "ADMIN".
         return ResponseEntity.ok(new CookieDTO(String.valueOf(adminId), UserType.ADMIN.getCode(), code));
     }
 
