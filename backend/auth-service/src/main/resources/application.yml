@@ -1,0 +1,15 @@
+spring:
+  application:
+    name: auth-service
+
+server:
+  port: 8083
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+
+jwt:
+  secret: ${JWT_SECRET:change-me-in-production-min-32-chars!!}
+  expiration-ms: 86400000
