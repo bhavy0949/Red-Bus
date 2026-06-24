@@ -1,23 +1,4 @@
 ---
-- name: Deploy Eureka Server
-  kubernetes.core.k8s:
-    state: present
-    namespace: "{{ k8s_namespace }}"
-    definition: "{{ lookup('file', '/Users/bhavygupta/Downloads/Red-Bus-main/k8s/eureka-server.yaml') | from_yaml_all | list }}"
-
-- name: Wait for Eureka Server to be ready
-  kubernetes.core.k8s_info:
-    kind: Pod
-    namespace: "{{ k8s_namespace }}"
-    label_selectors:
-      - app=eureka-server
-  register: eureka_pods
-  until: 
-    - eureka_pods.resources | length > 0
-    - eureka_pods.resources[0].status.phase == "Running"
-  retries: 30
-  delay: 10
-
 - name: Deploy API Gateway
   kubernetes.core.k8s:
     state: present

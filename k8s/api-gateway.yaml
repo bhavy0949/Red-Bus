@@ -24,11 +24,6 @@ spec:
         env:
         - name: SPRING_APPLICATION_NAME
           value: api-gateway
-        - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
-          valueFrom:
-            configMapKeyRef:
-              name: redbus-config
-              key: EUREKA_SERVER
         - name: LOGGING_LEVEL_ROOT
           value: "INFO"
         startupProbe:

@@ -2,17 +2,17 @@
 
 # Configuration
 JVM_OPTS="-Xmx192m -XX:ActiveProcessorCount=1"
-SPRING_OPTS="-Dspring.profiles.active=default -Dspring.datasource.username=postgres -Dspring.datasource.password=123 -Deureka.client.service-url.defaultZone=http://localhost:8761/eureka/"
+SPRING_OPTS="-Dspring.profiles.active=default -Dspring.datasource.username=postgres -Dspring.datasource.password=123"
 
 # Format is service:port
-SERVICES_LIST="eureka-server:8761 security-service:8084 member-service:8081 expedition-service:8082 payment-service:8083 api-gateway:8080"
+SERVICES_LIST="security-service:8084 member-service:8081 expedition-service:8082 payment-service:8083 api-gateway:8080"
 
 cleanup() {
   echo ""
   echo "=================================================="
   echo "Stopping all services..."
   echo "=================================================="
-  
+
   # Kill backend services
   for item in $SERVICES_LIST; do
     local service="${item%%:*}"
@@ -23,7 +23,7 @@ cleanup() {
       kill "$pid" 2>/dev/null
     fi
   done
-  
+
   # Kill frontend
   local frontend_pid=$(lsof -t -i:5173)
   if [ -n "$frontend_pid" ]; then
@@ -34,7 +34,7 @@ cleanup() {
   # Stop postgres container
   echo "Stopping PostgreSQL database container..."
   docker compose stop postgres
-  
+
   echo "Cleanup complete. Goodbye!"
   exit 0
 }
@@ -100,11 +100,6 @@ wait_for_port() {
   echo "✓ $name is up!"
 }
 
-# Start Eureka Server
-echo "Starting Eureka Server..."
-java $JVM_OPTS $SPRING_OPTS -jar backend/eureka-server/target/eureka-server-1.0.jar > logs_eureka.log 2>&1 &
-wait_for_port 8761 "Eureka Server"
-
 # Start Security Service
 echo "Starting Security Service..."
 java $JVM_OPTS $SPRING_OPTS -Dspring.datasource.url=jdbc:postgresql://localhost:5432/securityDB -jar backend/security-service/target/security-service-1.0.jar > logs_security.log 2>&1 &
@@ -137,7 +132,6 @@ npm --prefix frontend run dev &
 echo "=================================================="
 echo "All services are running!"
 echo "- Frontend: http://localhost:5173"
-echo "- Eureka Server: http://localhost:8761"
 echo "- API Gateway: http://localhost:8080"
 echo "Press [Ctrl+C] to stop all services clean."
 echo "=================================================="

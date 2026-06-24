@@ -18,15 +18,6 @@ services:
       retries: 10
       start_period: 15s
 
-  eureka-server:
-    image: bhavy0949/redbus-eureka-server:latest
-    container_name: redbus-eureka-server
-    ports:
-      - "8761:8761"
-    depends_on:
-      postgres:
-        condition: service_healthy
-
   member-service:
     image: bhavy0949/redbus-member-service:latest
     container_name: redbus-member-service
@@ -35,12 +26,9 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/memberDB
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: "123"
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
     depends_on:
       postgres:
         condition: service_healthy
-      eureka-server:
-        condition: service_started
 
   expedition-service:
     image: bhavy0949/redbus-expedition-service:latest
@@ -50,12 +38,9 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/expeditionDB
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: "123"
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
     depends_on:
       postgres:
         condition: service_healthy
-      eureka-server:
-        condition: service_started
 
   payment-service:
     image: bhavy0949/redbus-payment-service:latest
@@ -65,12 +50,9 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/paymentDB
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: "123"
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
     depends_on:
       postgres:
         condition: service_healthy
-      eureka-server:
-        condition: service_started
 
   security-service:
     image: bhavy0949/redbus-security-service:latest
@@ -80,24 +62,18 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/securityDB
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: "123"
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
     depends_on:
       postgres:
         condition: service_healthy
-      eureka-server:
-        condition: service_started
 
   api-gateway:
     image: bhavy0949/redbus-api-gateway:latest
     container_name: redbus-api-gateway
     environment:
       SPRING_PROFILES_ACTIVE: docker
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
     ports:
       - "8080:8080"
     depends_on:
-      eureka-server:
-        condition: service_started
       member-service:
         condition: service_started
       expedition-service:
