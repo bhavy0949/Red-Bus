@@ -1,48 +1,51 @@
 package com.shubilet.member_service.initializers;
 
-import org.springframework.boot.CommandLineRunner;
-import org.springframework.stereotype.Component;
-
-import com.shubilet.member_service.models.Admin;
-import com.shubilet.member_service.repositories.AdminRepository;
-
+import com.shubilet.member_service.common.enums.Role;
+import com.shubilet.member_service.models.AdminInfo;
+import com.shubilet.member_service.models.User;
+import com.shubilet.member_service.repositories.AdminInfoRepository;
+import com.shubilet.member_service.repositories.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Component;
 
 @Component
-public class AdminInitializer implements CommandLineRunner{
+public class AdminInitializer implements CommandLineRunner {
 
     private static final Logger logger = LoggerFactory.getLogger(AdminInitializer.class);
-    
-    private final AdminRepository adminRepository;
 
-    public AdminInitializer(
-        AdminRepository adminRepository
-    ) {
-        this.adminRepository = adminRepository;
+    private final UserRepository userRepository;
+    private final AdminInfoRepository adminInfoRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    public AdminInitializer(UserRepository userRepository,
+                            AdminInfoRepository adminInfoRepository,
+                            PasswordEncoder passwordEncoder) {
+        this.userRepository = userRepository;
+        this.adminInfoRepository = adminInfoRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
-    /**
-     * Initializes city-related data on application startup.
-     * Currently empty.
-     */
     @Override
     public void run(String... args) throws Exception {
-        logger.info("CityInitializer run method called.");
+        logger.info("AdminInitializer run method called.");
 
-        if(adminRepository.count() == 0) {
-            logger.info("No admins found. Creating system administrator.");
-            Admin admin = new Admin(
-                "System",
-                "Administrator",
-                "shubilet@example.com",
-                "SecurePassword123!"
+        if (!userRepository.existsByEmail("shubilet@example.com")) {
+            logger.info("No system admin found. Creating default administrator.");
+
+            User user = new User(
+                    "shubilet@example.com",
+                    passwordEncoder.encode("SecurePassword123!"),
+                    Role.ADMIN
             );
+            userRepository.save(user);
 
-            admin.setRefAdminId(1);
+            AdminInfo adminInfo = new AdminInfo(user, "System", "Administrator");
+            adminInfoRepository.save(adminInfo);
 
-            adminRepository.save(admin);
-            logger.info("System administrator created and verified.");
+            logger.info("System administrator created successfully.");
         }
     }
 }
