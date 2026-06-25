@@ -2,6 +2,7 @@
 k8s_namespace: ticketing-system
 docker_registry: "localhost:5000"
 services:
+  - auth-service
   - api-gateway
   - member-service
   - security-service

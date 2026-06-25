@@ -66,14 +66,29 @@ services:
       postgres:
         condition: service_healthy
 
+  auth-service:
+    image: bhavy0949/redbus-auth-service:latest
+    container_name: redbus-auth-service
+    environment:
+      MEMBER_SERVICE_URL: http://member-service:8081
+      JWT_SECRET: "redbus-jwt-secret-change-in-production-min32!!"
+    ports:
+      - "8085:8085"
+    depends_on:
+      member-service:
+        condition: service_started
+
   api-gateway:
     image: bhavy0949/redbus-api-gateway:latest
     container_name: redbus-api-gateway
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      JWT_SECRET: "redbus-jwt-secret-change-in-production-min32!!"
     ports:
       - "8080:8080"
     depends_on:
+      auth-service:
+        condition: service_started
       member-service:
         condition: service_started
       expedition-service:

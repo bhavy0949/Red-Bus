@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: api-gateway
+  name: auth-service
   namespace: redbus
 spec:
   replicas: 1
@@ -9,21 +9,26 @@ spec:
     type: Recreate
   selector:
     matchLabels:
-      app: api-gateway
+      app: auth-service
   template:
     metadata:
       labels:
-        app: api-gateway
+        app: auth-service
     spec:
       containers:
-      - name: api-gateway
-        image: bhavy0949/redbus-api-gateway:latest
+      - name: auth-service
+        image: bhavy0949/redbus-auth-service:latest
         imagePullPolicy: Always
         ports:
-        - containerPort: 8080
+        - containerPort: 8085
         env:
         - name: SPRING_APPLICATION_NAME
-          value: api-gateway
+          value: auth-service
+        - name: MEMBER_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: redbus-config
+              key: MEMBER_SERVICE_URL
         - name: JWT_SECRET
           valueFrom:
             secretKeyRef:
@@ -32,49 +37,46 @@ spec:
         - name: LOGGING_LEVEL_ROOT
           value: "INFO"
         startupProbe:
-          httpGet:
-            path: /actuator/health
-            port: 8080
+          tcpSocket:
+            port: 8085
           initialDelaySeconds: 30
           periodSeconds: 10
           timeoutSeconds: 5
           failureThreshold: 60
         livenessProbe:
-          httpGet:
-            path: /actuator/health
-            port: 8080
+          tcpSocket:
+            port: 8085
           initialDelaySeconds: 180
           periodSeconds: 10
           timeoutSeconds: 5
           failureThreshold: 6
         readinessProbe:
-          httpGet:
-            path: /actuator/health
-            port: 8080
+          tcpSocket:
+            port: 8085
           initialDelaySeconds: 120
           periodSeconds: 5
           timeoutSeconds: 5
           failureThreshold: 6
         resources:
           requests:
-            cpu: 300m
-            memory: 512Mi
+            cpu: 150m
+            memory: 256Mi
           limits:
-            cpu: 800m
-            memory: 1Gi
+            cpu: 400m
+            memory: 512Mi
       imagePullSecrets:
       - name: docker-credentials
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: api-gateway
+  name: auth-service
   namespace: redbus
 spec:
   selector:
-    app: api-gateway
+    app: auth-service
   ports:
   - protocol: TCP
-    port: 9090
-    targetPort: 8080
+    port: 8085
+    targetPort: 8085
   type: ClusterIP
