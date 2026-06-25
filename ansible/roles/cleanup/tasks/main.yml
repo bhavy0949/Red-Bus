@@ -15,7 +15,6 @@
   loop:
     - "/Users/bhavygupta/Downloads/Red-Bus-main/k8s/postgres.yaml"
     - "/Users/bhavygupta/Downloads/Red-Bus-main/k8s/pgadmin.yaml"
-    - "/Users/bhavygupta/Downloads/Red-Bus-main/k8s/eureka-server.yaml"
     - "/Users/bhavygupta/Downloads/Red-Bus-main/k8s/api-gateway.yaml"
     - "/Users/bhavygupta/Downloads/Red-Bus-main/k8s/member-service.yaml"
     - "/Users/bhavygupta/Downloads/Red-Bus-main/k8s/security-service.yaml"

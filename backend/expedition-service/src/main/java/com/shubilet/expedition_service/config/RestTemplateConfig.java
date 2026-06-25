@@ -1,6 +1,5 @@
 package com.shubilet.expedition_service.config;
 
-import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.ClientHttpResponse;
@@ -13,7 +12,6 @@ import java.io.IOException;
 public class RestTemplateConfig {
 
     @Bean
-    @LoadBalanced
     public RestTemplate restTemplate() {
         RestTemplate restTemplate = new RestTemplate();
 
