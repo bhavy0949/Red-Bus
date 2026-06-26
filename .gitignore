@@ -158,3 +158,6 @@ FlightInitializer.java
 # Project specific
 *.pdf
 images/
+
+# Ansible Vault
+ansible/vault.yml

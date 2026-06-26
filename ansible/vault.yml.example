@@ -1,0 +1,13 @@
+# Copy this file to vault.yml and fill in real values, then encrypt:
+#   ansible-vault encrypt vault.yml
+#
+# Run the playbook with:
+#   ansible-playbook playbook.yml --ask-vault-pass -e @vault.yml
+
+vault_postgres_password: "change_me"
+vault_admin_password: "change_me"
+vault_jwt_secret: "change_me"
+vault_encryption_key: "change_me"
+vault_elastic_password: "change_me"
+vault_kibana_password: "change_me"
+vault_logstash_password: "change_me"

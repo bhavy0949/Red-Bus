@@ -25,13 +25,13 @@
   kubernetes.core.k8s:
     state: present
     namespace: "{{ k8s_namespace }}"
-    definition: "{{ lookup('file', '/Users/bhavygupta/Downloads/Red-Bus-main/k8s/prometheus.yaml') | from_yaml_all | list }}"
+    definition: "{{ lookup('file', playbook_dir + '/../k8s/prometheus.yaml') | from_yaml_all | list }}"
 
 - name: Deploy Grafana
   kubernetes.core.k8s:
     state: present
     namespace: "{{ k8s_namespace }}"
-    definition: "{{ lookup('file', '/Users/bhavygupta/Downloads/Red-Bus-main/k8s/grafana.yaml') | from_yaml_all | list }}"
+    definition: "{{ lookup('file', playbook_dir + '/../k8s/grafana.yaml') | from_yaml_all | list }}"
 
 - name: Wait for Prometheus to be ready
   kubernetes.core.k8s_info:
