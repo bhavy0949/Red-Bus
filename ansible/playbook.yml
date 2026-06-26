@@ -35,8 +35,6 @@
       tags: vault
     - role: database-setup
       tags: database
-    - role: microservices-deploy
-      tags: deploy
     - role: elk-stack
       tags: elk
     - role: monitoring
