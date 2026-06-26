@@ -1,4 +1,10 @@
 ---
+- name: Deploy Auth Service
+  kubernetes.core.k8s:
+    state: present
+    namespace: "{{ k8s_namespace }}"
+    definition: "{{ lookup('file', '/Users/bhavygupta/Downloads/Red-Bus-main/k8s/auth-service.yaml') | from_yaml_all | list }}"
+
 - name: Deploy API Gateway
   kubernetes.core.k8s:
     state: present

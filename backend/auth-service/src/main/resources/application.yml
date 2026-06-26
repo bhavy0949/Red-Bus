@@ -3,7 +3,7 @@ spring:
     name: auth-service
 
 server:
-  port: 8083
+  port: 8085
 
 member-service:
   url: http://member-service:8081

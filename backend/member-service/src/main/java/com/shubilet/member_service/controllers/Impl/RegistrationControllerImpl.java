@@ -10,11 +10,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.shubilet.member_service.common.enums.Gender;
-import com.shubilet.member_service.models.Admin;
-import com.shubilet.member_service.models.Company;
-import com.shubilet.member_service.models.Customer;
-
 import com.shubilet.member_service.common.util.ErrorUtils;
 import com.shubilet.member_service.common.util.StringUtils;
 import com.shubilet.member_service.common.util.ValidationUtils;
@@ -115,15 +110,7 @@ public class RegistrationControllerImpl implements RegistrationController {
             return errorUtils.alreadyExists("User Email");
         }
 
-        Customer customer = new Customer(
-                customerRegistrationDTO.getName(),
-                customerRegistrationDTO.getSurname(),
-                Gender.fromValue(customerRegistrationDTO.getGender()),
-                customerRegistrationDTO.getEmail(),
-                customerRegistrationDTO.getPassword()
-        );
-
-        if (!registrationService.registerCustomer(customer)) {
+        if (!registrationService.registerCustomer(customerRegistrationDTO)) {
             logger.warn("A serious problem occurred in service level while creating a customer account with email{}", customerRegistrationDTO.getEmail());
             return errorUtils.criticalError();
         }
@@ -194,13 +181,7 @@ public class RegistrationControllerImpl implements RegistrationController {
             return errorUtils.alreadyExists("User Email");
         }
 
-        Company company = new Company(
-                companyRegistrationDTO.getTitle(),
-                companyRegistrationDTO.getEmail(),
-                companyRegistrationDTO.getPassword()
-        );
-
-        if (!registrationService.registerCompany(company)) {
+        if (!registrationService.registerCompany(companyRegistrationDTO)) {
             logger.warn("A serious problem occurred in service level while creating a company account with email{}", companyRegistrationDTO.getEmail());
             return errorUtils.criticalError();
         }
@@ -279,14 +260,7 @@ public class RegistrationControllerImpl implements RegistrationController {
             return errorUtils.alreadyExists("User Email");
         }
 
-        Admin admin = new Admin(
-                adminRegistrationDTO.getName(),
-                adminRegistrationDTO.getSurname(),
-                adminRegistrationDTO.getEmail(),
-                adminRegistrationDTO.getPassword()
-        );
-
-        if (!registrationService.registerAdmin(admin)) {
+        if (!registrationService.registerAdmin(adminRegistrationDTO)) {
             logger.warn("A serious problem occurred in service level while creating a company account with email {}", adminRegistrationDTO.getEmail());
             return errorUtils.criticalError();
         }

@@ -23,6 +23,7 @@ pipeline {
             parallel {
                 stage('Frontend') { steps { build job: 'frontend', wait: true } }
                 stage('API Gateway') { steps { build job: 'api-gateway', wait: true } }
+                stage('Auth Service') { steps { build job: 'auth-service', wait: true } }
                 stage('Member Service') { steps { build job: 'member-service', wait: true } }
                 stage('Security Service') { steps { build job: 'security-service', wait: true } }
                 stage('Expedition Service') { steps { build job: 'expedition-service', wait: true } }
@@ -52,6 +53,7 @@ pipeline {
                         kubectl apply -f k8s/vault.yaml --validate=false
                         kubectl apply -f k8s/postgres.yaml --validate=false
                         kubectl apply -f k8s/pgadmin.yaml --validate=false
+                        kubectl apply -f k8s/auth-service.yaml --validate=false
                         kubectl apply -f k8s/api-gateway.yaml --validate=false
                         kubectl apply -f k8s/member-service.yaml --validate=false
                         kubectl apply -f k8s/security-service.yaml --validate=false
