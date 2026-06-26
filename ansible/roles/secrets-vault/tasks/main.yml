@@ -16,11 +16,11 @@
         namespace: "{{ k8s_namespace }}"
       type: Opaque
       data:
-        POSTGRES_PASSWORD: "{{ 'your_db_password' | b64encode }}"
-        ADMIN_PASSWORD: "{{ 'SecurePassword123!' | b64encode }}"
+        POSTGRES_PASSWORD: "{{ vault_postgres_password | b64encode }}"
+        ADMIN_PASSWORD: "{{ vault_admin_password | b64encode }}"
         DOCKER_HUB_PASSWORD: "{{ docker_hub_password | b64encode }}"
-        JWT_SECRET: "{{ 'your_jwt_secret_key_here' | b64encode }}"
-        ENCRYPTION_KEY: "{{ 'your_encryption_key_here' | b64encode }}"
+        JWT_SECRET: "{{ vault_jwt_secret | b64encode }}"
+        ENCRYPTION_KEY: "{{ vault_encryption_key | b64encode }}"
 
 - name: Create Docker Registry Secret
   kubernetes.core.k8s:
@@ -46,9 +46,9 @@
         namespace: "{{ k8s_namespace }}"
       type: Opaque
       data:
-        ELASTIC_PASSWORD: "{{ 'elastic123' | b64encode }}"
-        KIBANA_PASSWORD: "{{ 'kibana123' | b64encode }}"
-        LOGSTASH_PASSWORD: "{{ 'logstash123' | b64encode }}"
+        ELASTIC_PASSWORD: "{{ vault_elastic_password | b64encode }}"
+        KIBANA_PASSWORD: "{{ vault_kibana_password | b64encode }}"
+        LOGSTASH_PASSWORD: "{{ vault_logstash_password | b64encode }}"
 
 - name: Verify secrets creation
   command: "kubectl get secrets -n {{ k8s_namespace }}"

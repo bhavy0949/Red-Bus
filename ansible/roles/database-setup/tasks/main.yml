@@ -3,7 +3,7 @@
   kubernetes.core.k8s:
     state: present
     namespace: "{{ k8s_namespace }}"
-    definition: "{{ lookup('file', '/Users/bhavygupta/Downloads/Red-Bus-main/k8s/postgres.yaml') | from_yaml_all | list }}"
+    definition: "{{ lookup('file', playbook_dir + '/../k8s/postgres.yaml') | from_yaml_all | list }}"
 
 - name: Wait for PostgreSQL to be ready
   kubernetes.core.k8s_info:
@@ -12,7 +12,7 @@
     label_selectors:
       - app=postgres
   register: postgres_pods
-  until: 
+  until:
     - postgres_pods.resources | length > 0
     - postgres_pods.resources[0].status.phase == "Running"
   retries: 30
@@ -22,7 +22,7 @@
   kubernetes.core.k8s:
     state: present
     namespace: "{{ k8s_namespace }}"
-    definition: "{{ lookup('file', '/Users/bhavygupta/Downloads/Red-Bus-main/k8s/pgadmin.yaml') | from_yaml_all | list }}"
+    definition: "{{ lookup('file', playbook_dir + '/../k8s/pgadmin.yaml') | from_yaml_all | list }}"
 
 - name: Create database initialization job
   kubernetes.core.k8s:
@@ -44,7 +44,7 @@
               - /bin/sh
               - -c
               - |
-                PGPASSWORD=123 psql -h postgres -U postgres -tc "
+                PGPASSWORD={{ vault_postgres_password }} psql -h postgres -U postgres -tc "
                 CREATE DATABASE IF NOT EXISTS expeditionDB;
                 CREATE DATABASE IF NOT EXISTS memberDB;
                 CREATE DATABASE IF NOT EXISTS securityDB;
