@@ -104,10 +104,4 @@ kubectl apply -f k8s/api-gateway.yaml
 - **Automation**: One-click "Build & Deploy" via Jenkins Orchestrator.
 
 ---
-
-## 👨‍💻 Authors
-- **Rahul Raman**
-- **Affan Shaikh**
-
----
 > **Note**: This project was developed as a Final Project showcase for production-grade microservice orchestration.
