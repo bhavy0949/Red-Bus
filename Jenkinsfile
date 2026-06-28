@@ -1,16 +1,22 @@
 pipeline {
     agent any
-    
+
     environment {
         GIT_REPO = 'https://github.com/bhavy0949/Red-Bus.git'
         PATH = "/opt/homebrew/bin:/usr/local/bin:${env.PATH}"
         DOCKER_HUB_CREDENTIALS = credentials('docker-hub-credentials')
+        POSTGRES_PASSWORD      = credentials('postgres-password')
+        JWT_SECRET             = credentials('jwt-secret')
+        ADMIN_PASSWORD         = credentials('admin-password')
+        ELASTIC_PASSWORD       = credentials('elastic-password')
+        KIBANA_PASSWORD        = credentials('kibana-password')
+        LOGSTASH_PASSWORD      = credentials('logstash-password')
     }
-    
+
     triggers {
         githubPush()
     }
-    
+
     stages {
         stage('Clone Repository') {
             steps {
@@ -18,38 +24,57 @@ pipeline {
                 git branch: 'main', url: "${GIT_REPO}"
             }
         }
-        
+
         stage('Build & Push Services') {
             parallel {
-                stage('Frontend') { steps { build job: 'frontend', wait: true } }
-                stage('API Gateway') { steps { build job: 'api-gateway', wait: true } }
-                stage('Auth Service') { steps { build job: 'auth-service', wait: true } }
-                stage('Member Service') { steps { build job: 'member-service', wait: true } }
-                stage('Security Service') { steps { build job: 'security-service', wait: true } }
+                stage('Frontend')           { steps { build job: 'frontend',           wait: true } }
+                stage('API Gateway')        { steps { build job: 'api-gateway',        wait: true } }
+                stage('Auth Service')       { steps { build job: 'auth-service',       wait: true } }
+                stage('Member Service')     { steps { build job: 'member-service',     wait: true } }
+                stage('Security Service')   { steps { build job: 'security-service',   wait: true } }
                 stage('Expedition Service') { steps { build job: 'expedition-service', wait: true } }
-                stage('Payment Service') { steps { build job: 'payment-service', wait: true } }
+                stage('Payment Service')    { steps { build job: 'payment-service',    wait: true } }
             }
         }
-        
+
         stage('Deploy to Kubernetes') {
             steps {
                 echo '========== Deploying to Kubernetes =========='
                 script {
                     def gitTag = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
                     echo "Updating manifests to use version: ${gitTag}"
-                    
-                    // Replace :latest with :hash in all k8s files
+
                     sh "sed -i '' 's/:latest/:${gitTag}/g' k8s/*.yaml"
                     sh """
                         kubectl apply -f k8s/namespace.yaml --validate=false
                         kubectl apply -f k8s/configmap.yaml --validate=false
-                        kubectl delete secret docker-credentials -n redbus --ignore-not-found
+
+                        # Docker Hub pull secret
                         kubectl create secret docker-registry docker-credentials -n redbus \\
                             --docker-server=https://index.docker.io/v1/ \\
                             --docker-username=\$DOCKER_HUB_CREDENTIALS_USR \\
                             --docker-password=\$DOCKER_HUB_CREDENTIALS_PSW \\
-                            --docker-email=redbus@example.com
-                        kubectl apply -f k8s/deprecated-secrets/secrets.yaml --validate=false
+                            --docker-email=redbus@example.com \\
+                            --dry-run=client -o yaml | kubectl apply -f -
+
+                        # App secrets — injected from Jenkins Credentials, never stored in git
+                        kubectl create secret generic redbus-secrets -n redbus \\
+                            --from-literal=POSTGRES_PASSWORD=\$POSTGRES_PASSWORD \\
+                            --from-literal=DB_PASSWORD=\$POSTGRES_PASSWORD \\
+                            --from-literal=JWT_SECRET=\$JWT_SECRET \\
+                            --from-literal=ADMIN_PASSWORD=\$ADMIN_PASSWORD \\
+                            --from-literal=ADMIN_EMAIL=redbus@example.com \\
+                            --from-literal=DOCKER_HUB_USERNAME=\$DOCKER_HUB_CREDENTIALS_USR \\
+                            --from-literal=DOCKER_HUB_PASSWORD=\$DOCKER_HUB_CREDENTIALS_PSW \\
+                            --dry-run=client -o yaml | kubectl apply -f -
+
+                        # ELK secrets
+                        kubectl create secret generic elk-credentials -n redbus \\
+                            --from-literal=ELASTIC_PASSWORD=\$ELASTIC_PASSWORD \\
+                            --from-literal=KIBANA_PASSWORD=\$KIBANA_PASSWORD \\
+                            --from-literal=LOGSTASH_PASSWORD=\$LOGSTASH_PASSWORD \\
+                            --dry-run=client -o yaml | kubectl apply -f -
+
                         kubectl apply -f k8s/vault.yaml --validate=false
                         kubectl apply -f k8s/postgres.yaml --validate=false
                         kubectl apply -f k8s/pgadmin.yaml --validate=false
@@ -67,7 +92,7 @@ pipeline {
                 }
             }
         }
-        
+
         stage('Verify Deployment') {
             steps {
                 echo '========== Verifying Deployment =========='
@@ -79,7 +104,7 @@ pipeline {
             }
         }
     }
-    
+
     post {
         always {
             echo '========== Pipeline Execution Completed =========='
