@@ -1,9 +1,10 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: postgres
   namespace: redbus
 spec:
+  serviceName: postgres
   replicas: 1
   selector:
     matchLabels:
@@ -26,8 +27,10 @@ spec:
               key: POSTGRES_PASSWORD
         - name: POSTGRES_USER
           value: postgres
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
         volumeMounts:
-        - name: postgres-storage
+        - name: postgres-data
           mountPath: /var/lib/postgresql/data
         - name: postgres-init
           mountPath: /docker-entrypoint-initdb.d
@@ -62,24 +65,18 @@ spec:
           timeoutSeconds: 5
           failureThreshold: 6
       volumes:
-      - name: postgres-storage
-        persistentVolumeClaim:
-          claimName: postgres-pvc
       - name: postgres-init
         configMap:
           name: postgres-init-scripts
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: postgres-pvc
-  namespace: redbus
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 1Gi
+  volumeClaimTemplates:
+  - metadata:
+      name: postgres-data
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 1Gi
 ---
 apiVersion: v1
 kind: Service
