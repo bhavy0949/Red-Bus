@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.shubilet.expedition_service.common.enums.forReservation.SeatStatus;
 import com.shubilet.expedition_service.common.util.DTOMapperUtils;
@@ -59,10 +60,13 @@ public class SeatServiceImpl implements SeatService {
         return seatRepository.existsByExpeditionIdAndSeatNo(expeditionId, seatNo);
     }
 
+    @Transactional
     public int bookSeat(int expeditionId, int customerId, int seatNo) {
         Instant now = Instant.now();
 
-        Seat seat = seatRepository.findByExpeditionIdAndSeatNo(expeditionId, seatNo);
+        // Lock the seat row for the duration of this transaction so two concurrent
+        // book attempts cannot both pass the availability check on stale reads.
+        Seat seat = seatRepository.findByExpeditionIdAndSeatNoForUpdate(expeditionId, seatNo);
 
         if(seat == null) {
             return -1;
@@ -91,8 +95,11 @@ public class SeatServiceImpl implements SeatService {
         return seat.getId();
     }
 
+    @Transactional
     public boolean blockSeat(int expeditionId, int seatNo, int customerId) {
-        Seat seat = seatRepository.findByExpeditionIdAndSeatNo(expeditionId, seatNo);
+        // Lock the seat row so a concurrent block/book on the same seat waits here
+        // and then correctly sees this seat as taken, instead of racing on the write.
+        Seat seat = seatRepository.findByExpeditionIdAndSeatNoForUpdate(expeditionId, seatNo);
         if (seat == null || seat.isBooked()) {
             return false;
         }
@@ -103,8 +110,9 @@ public class SeatServiceImpl implements SeatService {
         return true;
     }
 
+    @Transactional
     public boolean unblockSeat(int expeditionId, int seatNo, int customerId) {
-        Seat seat = seatRepository.findByExpeditionIdAndSeatNo(expeditionId, seatNo);
+        Seat seat = seatRepository.findByExpeditionIdAndSeatNoForUpdate(expeditionId, seatNo);
         if (seat == null) return false;
         if (seat.getStatus() == com.shubilet.expedition_service.common.enums.SeatStatusForModel.BLOCKED 
             && seat.getBlockedBy() != null && seat.getBlockedBy() == customerId) {
