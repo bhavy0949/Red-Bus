@@ -4,9 +4,12 @@ import java.time.Instant;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
+import jakarta.persistence.LockModeType;
 
 import com.shubilet.expedition_service.dataTransferObjects.responses.forRepositories.SeatForCompanyRepoDTO;
 import com.shubilet.expedition_service.dataTransferObjects.responses.forRepositories.SeatForCustomerRepoDTO;
@@ -197,6 +200,38 @@ public interface SeatRepository extends JpaRepository<Seat, Integer> {
                 AND s.expeditionId = :expeditionId
         """)
     Seat findByExpeditionIdAndSeatNo(
+            @Param("expeditionId") int expeditionId,
+            @Param("seatNo") int seatNo
+    );
+
+    /***
+     *
+     * Operation: FindByExpeditionIdAndSeatNoForUpdate
+     *
+     * Same lookup as {@link #findByExpeditionIdAndSeatNo}, but acquires a
+     * PESSIMISTIC_WRITE lock on the matched {@link Seat} row (i.e. issues a
+     * {@code SELECT ... FOR UPDATE}). This must be called from within an active
+     * transaction (see {@code @Transactional} on the service methods).
+     *
+     * The lock prevents the classic block/book race condition: if two customers
+     * attempt to block or book the same seat concurrently, the second transaction
+     * blocks until the first commits, then re-reads the now-updated row and
+     * correctly observes it as taken — instead of both passing a stale
+     * "is it available?" check and racing on the write (last-write-wins).
+     *
+     * @param expeditionId the identifier of the expedition to which the seat belongs
+     * @param seatNo the seat number within the expedition
+     * @return the {@link Seat} entity matching the given expeditionId and seatNo,
+     *         locked for the duration of the current transaction
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+        SELECT s
+        FROM Seat s
+            WHERE  s.seatNo = :seatNo
+                AND s.expeditionId = :expeditionId
+        """)
+    Seat findByExpeditionIdAndSeatNoForUpdate(
             @Param("expeditionId") int expeditionId,
             @Param("seatNo") int seatNo
     );
