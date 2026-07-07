@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -289,5 +290,34 @@ public interface SeatRepository extends JpaRepository<Seat, Integer> {
 
 
     List<Seat> findAllByExpeditionIdOrderBySeatNoAsc(int expeditionId);
+
+    /***
+     *
+     * Operation: ReleaseExpiredBlocks
+     *
+     * Bulk-resets every seat whose temporary hold has lapsed — i.e. seats still
+     * persisted as BLOCKED whose {@code blockedUntil} timestamp is now in the past —
+     * back to AVAILABLE, clearing {@code blockedBy} and {@code blockedUntil}.
+     *
+     * The seat entity already treats an expired BLOCKED seat as AVAILABLE on read
+     * (see {@code Seat.getStatus()}), so this does not fix a correctness bug; it
+     * keeps the persisted {@code status} column truthful so that raw queries,
+     * reports, or admin views don't observe stale "Blocked" rows. Intended to be
+     * driven by a periodic {@code @Scheduled} sweeper.
+     *
+     * @param now the cutoff timestamp; holds that expired before this are released
+     * @return the number of seat rows released
+     */
+    @Modifying
+    @Query("""
+        UPDATE Seat s
+            SET s.status = com.shubilet.expedition_service.common.enums.SeatStatusForModel.AVAILABLE,
+                s.blockedBy = null,
+                s.blockedUntil = null
+        WHERE s.status = com.shubilet.expedition_service.common.enums.SeatStatusForModel.BLOCKED
+            AND s.blockedUntil IS NOT NULL
+            AND s.blockedUntil < :now
+    """)
+    int releaseExpiredBlocks(@Param("now") Instant now);
 
 }
