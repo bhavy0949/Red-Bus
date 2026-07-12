@@ -5,9 +5,12 @@ import java.time.Instant;
 import java.math.BigDecimal;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
+import jakarta.persistence.LockModeType;
 
 import com.shubilet.expedition_service.dataTransferObjects.responses.forRepositories.ExpeditionForCompanyRepoDTO;
 import com.shubilet.expedition_service.dataTransferObjects.responses.forRepositories.ExpeditionForCustomerRepoDTO;
@@ -404,4 +407,27 @@ public interface ExpeditionRepository extends JpaRepository<Expedition, Integer>
 
     @Query("SELECT COUNT(e) FROM Expedition e WHERE e.companyId = :companyId AND e.dateAndTime >= :now")
     long countActiveByCompanyId(@Param("companyId") int companyId, @Param("now") Instant now);
+
+    /***
+     *
+     * Operation: FindByIdForUpdate
+     *
+     * Loads an {@link Expedition} by id while acquiring a PESSIMISTIC_WRITE lock
+     * on the row (i.e. issues a {@code SELECT ... FOR UPDATE}). Must be called from
+     * within an active transaction (see {@code @Transactional} on the service).
+     *
+     * This guards the booking counter and dynamic-price update against lost updates:
+     * booking a seat reads numberOfBookedSeats, increments it, recomputes the
+     * occupancy-based price, and accumulates profit. Without the lock, two concurrent
+     * bookings could both read the same count and both write count+1, silently losing
+     * one booking and corrupting both the dynamic price and the profit total. With the
+     * lock, the second booking waits for the first to commit, then reads the updated
+     * count and prices correctly.
+     *
+     * @param id the expedition identifier
+     * @return the {@link Expedition}, locked for the duration of the current transaction
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT e FROM Expedition e WHERE e.id = :id")
+    Expedition findByIdForUpdate(@Param("id") int id);
 }

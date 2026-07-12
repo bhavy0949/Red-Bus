@@ -5,6 +5,7 @@ import java.util.List;
 import java.math.BigDecimal;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.shubilet.expedition_service.common.enums.forReservation.ExpeditionStatus;
 import com.shubilet.expedition_service.common.util.DTOMapperUtils;
@@ -111,21 +112,26 @@ public class ExpeditionServiceImpl implements ExpeditionService {
         return expeditionRepository.existsById(expeditionId);
     }
 
+    @Transactional
     public boolean bookSeat(int expeditionId) {
-        Expedition expedition = expeditionRepository.findById(expeditionId).orElse(null);
+        // Lock the expedition row for the duration of this transaction so the
+        // read-increment-reprice-accumulate sequence below is atomic. Without the
+        // lock, concurrent bookings lose updates to numberOfBookedSeats, which in
+        // turn corrupts the occupancy-based dynamic price and the profit total.
+        Expedition expedition = expeditionRepository.findByIdForUpdate(expeditionId);
 
         if(expedition == null) {
             return false;
         }
 
         expedition.setNumberOfBookedSeats(expedition.getNumberOfBookedSeats() + 1);
-        
+
         // Update dynamic price before adding to profit and saving
         expedition.updateDynamicPrice();
-        
+
         expedition.setProfit(expedition.getProfit().add(expedition.getPrice()));
         expeditionRepository.save(expedition);
-        
+
         System.out.println("Expedition after booking: " + expedition.toString());
         return true;
     }
