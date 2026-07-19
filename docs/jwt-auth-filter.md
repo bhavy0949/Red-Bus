@@ -111,3 +111,15 @@ that two headers are visible to them:
 - **No server-side revocation.** A JWT stays valid until it expires; logout
   clears the cookie but cannot invalidate an already-issued token. Short
   expiry plus refresh tokens, or a revocation list, would address this.
+
+
+## Questions
+Q1. are cookies attached within the request header only?
+- Yes — cookies travel in HTTP headers, in both directions:
+  Server → browser uses the Set-Cookie response header:
+  Set-Cookie: jwt=eyJhbGci...; HttpOnly; Secure; Path=/; Max-Age=3600
+  Browser → server uses the Cookie request header:
+  Cookie: jwt=eyJhbGci...
+  So in your project, when JwtAuthFilter calls request.getCookies(), Spring is just parsing that Cookie request header for you.
+
+
