@@ -39,7 +39,7 @@ Request
   │     └─ yes → pass through, no auth
   │
   ├─ read "jwt" cookie
-  │     └─ missing → 401 "Missing JWT cookie"
+  │     └─ missing → 401 "Missing JWT cookie" (frontend when recieve this msg will redirect to the login page)
   │
   ├─ JwtService.validateAndExtract(token)
   │     └─ bad signature or expired → 401 "Invalid or expired JWT"
