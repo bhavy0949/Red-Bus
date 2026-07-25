@@ -1,10 +1,8 @@
 package com.shubilet.expedition_service;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
-class ExpeditionServiceApplicationTests {
+class ExpeditionServiceApplicationTests extends AbstractPostgresIntegrationTest {
 
 	@Test
 	void contextLoads() {
